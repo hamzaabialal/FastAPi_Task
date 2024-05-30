@@ -53,36 +53,29 @@ def create_template(template: schemas.TemplateModelCreate, db: Session = Depends
     for tab_data in template_data['tabs']:
         new_tab = models.TabModel(tab_name=tab_data['tab_name'], tab_rename=tab_data['tab_rename'],
                                   tab_is_active=tab_data['tab_is_active'], template=new_template)
+        if tab_data.get('tab_sections', []):
+            for section_data in tab_data.get('tab_sections', []):
+                new_section = models.SectionModel(section_name=section_data['section_name'],
+                                                  section_rename=section_data['section_rename'],
+                                                  section_is_active=section_data['section_is_active'], tab=new_tab)
 
-        for section_data in tab_data.get('tab_sections', []):
-            new_section = models.SectionModel(section_name=section_data['section_name'],
-                                              section_rename=section_data['section_rename'],
-                                              section_is_active=section_data['section_is_active'], tab=new_tab)
+                for field_data in section_data['section_fields']:
+                    new_field = models.FieldModel(field_name=field_data['field_name'],
+                                                  field_rename=field_data['field_rename'],
+                                                  field_type=field_data['field_type'],
+                                                  field_is_active=field_data['field_is_active'], section=new_section)
+                    db.add(new_field)
 
-            for field_data in section_data['section_fields']:
-                new_field = models.FieldModel(field_name=field_data['field_name'],
-                                              field_rename=field_data['field_rename'],
-                                              field_type=field_data['field_type'],
-                                              field_is_active=field_data['field_is_active'], section=new_section)
-                db.add(new_field)
+                db.add(new_section)
+            db.add(new_tab)
 
-            db.add(new_section)
-        db.add(new_tab)
-
-    db.add(new_template)
-    db.commit()
-    db.refresh(new_template)
+        db.add(new_template)
+        db.commit()
+        db.refresh(new_template)
 
     return new_template
 
-
-# @app.post("/fill-form/", response_model=schemas.FormData)
-# def fill_form(form_data: schemas.FormData):
-#     template_name = form_data.template_name
-#     try:
-#         if not templates.get_template(template_name):
-#             raise HTTPException(status_code=404, detail="Template not found.")
-#     except Exception as e:
-#         raise HTTPException(status_code=404, detail="Template not found.")
-#     template = templates[form_data.template_name]
-#     return form_data
+@app.get("/template/name/", response_model=List[schemas.TemplateModelCreate])
+def get_template(db: Session = Depends(get_db), name=None):
+    query = db.query(models.TemplateModel).filter(models.TemplateModel.name==name).all()
+    return query
