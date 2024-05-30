@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+  web:
+    build: .
+    command: sh -c "uvicorn main:app --reload --port=8000 --host=0.0.0.0"
+    ports:
+      - 8000:8000
+    depends_on:
+      - db
+    links:
+        - db
+    environment:
+        DATABASE_URL: postgresql://postgres:postgres@db/postgres
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - 5432:5432
